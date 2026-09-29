@@ -18,10 +18,11 @@ The complete unpacked extension is generated in `dist/`. Builds replace that gen
 1. Open `chrome://extensions` in Chrome and enable **Developer mode**.
 2. Choose **Load unpacked** and select the `dist` folder in this project.
 3. Open a regular webpage and click **Plastic** in the extensions toolbar. Selection starts immediately.
-4. Hover over a component. The outline shows its tag and dimensions.
-5. Press **↑** to select its parent and **↓** to return to its child.
-6. **Click** or press **Enter** to capture the selected element. Paste into your HTML/CSS editor or an HTML-capable canvas.
-7. Press **Escape**, or click the toolbar icon again, to cancel.
+4. Choose the output style **before** pasting: **CSS** (inline styles, default) or **Tailwind** (utility classes). The popup has an Output style switch, and the picker bar at the bottom of the page has a CSS/Tailwind toggle. The choice is remembered.
+5. Hover over a component. The outline shows its tag and dimensions.
+6. Press **↑** to select its parent and **↓** to return to its child.
+7. **Click** or press **Enter** to capture the selected element. Paste into your HTML/CSS editor or an HTML-capable canvas.
+8. Press **Escape**, or click the toolbar icon again, to cancel.
 
 The default activation shortcut is **Command+Shift+P** on macOS and **Ctrl+Shift+P** elsewhere. Assign or change it in `chrome://extensions/shortcuts` if another extension already uses it.
 
@@ -43,6 +44,8 @@ Tests build and load the actual extension in an isolated Chromium profile, invok
 ## Compact capture output
 
 Captures compare a focused set of visual CSS properties against a clean browser document. Only differences are written, with parents processed first so children reuse inherited styles. Site classes, HTML IDs, event handlers, and framework data attributes are omitted; semantic/media attributes and SVG geometry are retained.
+
+CSS mode writes the differences as inline `style` attributes. Tailwind mode converts each inline style to utility classes instead — idiomatic utilities where they exist (`flex`, `font-bold`, `text-center`) and arbitrary values/properties elsewhere (`text-[24px]`, `bg-[rgb(180,20,60)]`, `[font-feature-settings:liga]`), so no `style` attributes remain. Tailwind output needs Tailwind in the destination to render as intended.
 
 A styled button with an SVG icon is covered by a size regression test (under 1,500 characters) and an exact screenshot comparison after pasting into a separate document. The current fixture produces 664 characters. Output size varies with the component's structure and styling.
 

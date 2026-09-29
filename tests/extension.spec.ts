@@ -205,6 +205,67 @@ test('a styled button stays compact and renders identically when pasted', async 
   await page.locator('#paste-test').evaluate(frame => frame.remove());
 });
 
+test('tailwind mode copies utility classes instead of inline styles', async () => {
+  await page.goto(origin);
+  await page.bringToFront();
+  const response = await control.evaluate(async () => {
+    const chrome = (globalThis as any).chrome;
+    const [tab] = await chrome.tabs.query({active:true, currentWindow:true});
+    await chrome.scripting.executeScript({target: {tabId: tab.id}, files:['content.js']});
+    return chrome.tabs.sendMessage(tab.id, {action:'COPY_PAGE', format:'tailwind'});
+  });
+  expect(response.success).toBe(true);
+  expect(response.message).toContain('Tailwind');
+  const output = await clipboard();
+  expect(output.html).toContain('class="');
+  expect(output.html).not.toContain('style="');
+  expect(output.html).toMatch(/text-\[|bg-\[|font-bold|flex|text-center/);
+  // CSS remains the default when no format is requested.
+  const cssResponse = await control.evaluate(async () => {
+    const chrome = (globalThis as any).chrome;
+    const [tab] = await chrome.tabs.query({active:true, currentWindow:true});
+    return chrome.tabs.sendMessage(tab.id, {action:'COPY_PAGE', format:'css'});
+  });
+  expect(cssResponse.success).toBe(true);
+  expect((await clipboard()).html).toContain('style="');
+});
+
+test('picker offers a CSS/Tailwind toggle before capture', async () => {
+  await page.goto(origin);
+  await command('START_PICKER');
+  const picker = page.locator('[data-plastic-picker]');
+  await expect(picker).toHaveCount(1);
+  // Toggle buttons live in the picker shadow root; query through it directly.
+  const formats = await page.evaluate(() => {
+    const host = document.querySelector('[data-plastic-picker]')!;
+    const buttons = Array.from(host.shadowRoot!.querySelectorAll('button[data-format]'));
+    return buttons.map(button => button.getAttribute('data-format'));
+  });
+  expect(formats).toEqual(['css', 'tailwind']);
+  await page.evaluate(() => {
+    const host = document.querySelector('[data-plastic-picker]')!;
+    const tailwind = host.shadowRoot!.querySelector('button[data-format="tailwind"]') as HTMLButtonElement;
+    tailwind.click();
+  });
+  const selected = await page.evaluate(() => {
+    const host = document.querySelector('[data-plastic-picker]')!;
+    return host.shadowRoot!.querySelector('button[data-format="tailwind"]')!.getAttribute('aria-pressed');
+  });
+  expect(selected).toBe('true');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('[data-plastic-picker]')).toHaveCount(0);
+  // Leave Tailwind selected to prove popup persistence, then reset to CSS.
+  await control.reload();
+  await expect(control.locator('input[name="plastic-format"][value="tailwind"]')).toBeChecked();
+  await control.locator('input[name="plastic-format"][value="css"]').click();
+});
+
+test('popup output-style toggle defaults to CSS', async () => {
+  await control.reload();
+  await expect(control.locator('input[name="plastic-format"][value="css"]')).toBeChecked();
+  await expect(control.locator('input[name="plastic-format"][value="tailwind"]')).not.toBeChecked();
+});
+
 test('popup reports restricted pages and re-enables its buttons', async () => {
   await page.goto('chrome://version');
   await page.bringToFront();
