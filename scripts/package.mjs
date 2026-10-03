@@ -7,3 +7,4 @@ for (const file of ['manifest.json', 'popup.html']) {
   await copyFile(file, `dist/${file}`);
 }
 await cp('icons', 'dist/icons', { recursive: true });
+await cp('fonts', 'dist/fonts', { recursive: true });
